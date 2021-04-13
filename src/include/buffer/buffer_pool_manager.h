@@ -16,6 +16,7 @@
 #include <mutex>  // NOLINT
 #include <unordered_map>
 
+#include "buffer/clock_replacer.h"
 #include "buffer/lru_replacer.h"
 #include "recovery/log_manager.h"
 #include "storage/disk/disk_manager.h"
@@ -151,6 +152,14 @@ class BufferPoolManager {
    * Flushes all the pages in the buffer pool to disk.
    */
   void FlushAllPagesImpl();
+
+  /**
+   * Find a free page from the buffer pool.
+   * This method is not guarded by the latch.
+   * @param[out] frame_id id of free page
+   * @return false if no free page exists, true else
+   */
+  bool FindOneFreePage(frame_id_t *frame_id);
 
   /** Number of pages in the buffer pool. */
   size_t pool_size_;
