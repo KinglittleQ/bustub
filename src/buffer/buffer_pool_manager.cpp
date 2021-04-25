@@ -35,7 +35,7 @@ BufferPoolManager::~BufferPoolManager() {
 }
 
 bool BufferPoolManager::FindOneFreePage(frame_id_t *frame_id) {
-  if (free_list_.size() > 0) {
+  if (!free_list_.empty()) {
     // find a free page in freelist and pop it
     *frame_id = free_list_.front();
     free_list_.pop_front();
