@@ -47,6 +47,14 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+
+  std::vector<char> refs_;  // reference bits
+  size_t size_;
+
+  frame_id_t arm_;
+  std::mutex latch_;
+
+  const char INVALID_REF_BIT = 3;
 };
 
 }  // namespace bustub

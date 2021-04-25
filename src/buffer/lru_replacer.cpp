@@ -14,16 +14,54 @@
 
 namespace bustub {
 
-LRUReplacer::LRUReplacer(size_t num_pages) {}
+LRUReplacer::LRUReplacer(size_t num_pages) {
+  refs_.resize(num_pages);
+  size_ = 0;
+  arm_ = 0;
+  std::fill(refs_.begin(), refs_.end(), INVALID_REF_BIT);
+}
 
 LRUReplacer::~LRUReplacer() = default;
 
-bool LRUReplacer::Victim(frame_id_t *frame_id) { return false; }
+bool LRUReplacer::Victim(frame_id_t *frame_id) {
+  std::lock_guard<std::mutex> lock_guard(latch_);
+  if (size_ == 0) {
+    return false;
+  }
 
-void LRUReplacer::Pin(frame_id_t frame_id) {}
+  bool found = false;
+  while (!found) {
+    if (refs_[arm_] == 1) {
+      refs_[arm_] = 0;
+    } else if (refs_[arm_] == 0) {
+      *frame_id = arm_;
+      refs_[arm_] = INVALID_REF_BIT;
+      size_--;
+      found = true;
+    }
 
-void LRUReplacer::Unpin(frame_id_t frame_id) {}
+    arm_ = (arm_ + 1) % refs_.size();
+  }
 
-size_t LRUReplacer::Size() { return 0; }
+  return true;
+}
+
+void LRUReplacer::Pin(frame_id_t frame_id) {
+  std::lock_guard<std::mutex> lock_guard(latch_);
+  if (refs_[frame_id] != INVALID_REF_BIT) {
+    refs_[frame_id] = INVALID_REF_BIT;
+    size_--;
+  }
+}
+
+void LRUReplacer::Unpin(frame_id_t frame_id) {
+  std::lock_guard<std::mutex> lock_guard(latch_);
+  if (refs_[frame_id] == INVALID_REF_BIT) {
+    refs_[frame_id] = 1;
+    size_++;
+  }
+}
+
+size_t LRUReplacer::Size() { return size_; }
 
 }  // namespace bustub
