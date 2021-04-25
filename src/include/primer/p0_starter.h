@@ -169,10 +169,7 @@ class RowMatrixOperations {
                                                     std::unique_ptr<RowMatrix<T>> matB,
                                                     std::unique_ptr<RowMatrix<T>> matC) {
     // TODO(P0): Add code
-    auto matAB = MultiplyMatrices(matA, matB);
-    auto result = AddMatrices(matAB, matC);
-
-    return result;
+    return AddMatrices(MultiplyMatrices(matA, matB), matC);
   }
 };
 }  // namespace bustub
