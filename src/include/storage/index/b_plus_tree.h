@@ -109,6 +109,27 @@ class BPlusTree {
 
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
+  template <typename N>
+  void UpdateParentId(N *node, page_id_t parent_id);
+
+  template <typename N = BPlusTreePage>
+  N *GetNode(page_id_t page_id) {
+    auto page = buffer_pool_manager_->FetchPage(page_id);
+    if (page == nullptr) {
+      throw Exception(ExceptionType::OUT_OF_MEMORY, "unbale to fetch page");
+    }
+    return reinterpret_cast<N *>(page->GetData());
+  }
+
+  template <typename N>
+  N *NewNode(page_id_t *page_id) {
+    auto page = buffer_pool_manager_->NewPage(page_id);
+    if (page == nullptr) {
+      throw Exception(ExceptionType::OUT_OF_MEMORY, "out of memory");
+    }
+    return reinterpret_cast<N *>(page->GetData());
+  }
+
   // member variable
   std::string index_name_;
   page_id_t root_page_id_;

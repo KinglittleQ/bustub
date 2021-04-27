@@ -96,6 +96,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
 }
 
 bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty_) {
+  assert(page_id != INVALID_PAGE_ID);
   std::lock_guard<std::mutex> lock_guard(latch_);
 
   if (page_table_.find(page_id) == page_table_.end()) {
@@ -106,8 +107,13 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty_) {
   auto frame_id = page_table_[page_id];
   auto &page = pages_[page_table_[page_id]];
 
-  assert(page.pin_count_ > 0);
-  page.pin_count_ -= 1;
+  if (page.pin_count_ <= 0) {
+    printf("page_id: %d, pin_count=%d\n", page_id, page.pin_count_);
+  }
+  // assert(page.pin_count_ > 0);
+  if (page.pin_count_ > 0) {
+    page.pin_count_ -= 1;
+  }
 
   page.is_dirty_ |= is_dirty_;
 

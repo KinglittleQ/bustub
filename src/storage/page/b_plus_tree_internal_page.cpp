@@ -83,15 +83,13 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const {
  */
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyComparator &comparator) const {
-  for (int i = 1; i < GetSize(); i++) {
-    int cmp = comparator(key, KeyAt(i));
-    if (cmp == 0) {
-      return ValueAt(i);
-    } else if (cmp < 0) {
+  int i;
+  for (i = 1; i < GetSize(); i++) {
+    if (comparator(key, KeyAt(i)) < 0) {
       break;
     }
   }
-  return INVALID_PAGE_ID;
+  return ValueAt(i - 1);
 }
 
 /*****************************************************************************
@@ -142,7 +140,14 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
-  
+  assert(recipient->GetSize() == 0);
+  assert(GetSize() == GetMaxSize());
+
+  int left_size = GetSize() / 2;
+  int right_size = GetSize() - left_size;
+
+  recipient->CopyNFrom(array + left_size, right_size, buffer_pool_manager);
+  SetSize(left_size);
 }
 
 /* Copy entries into me, starting from {items} and copy {size} entries.
@@ -150,7 +155,18 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient
  * So I need to 'adopt' them by changing their parent page id, which needs to be persisted with BufferPoolManger
  */
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {
+  memcpy(array + GetSize(), items, size * sizeof(MappingType));
+  IncreaseSize(size);
+
+  for (int i = 0; i < size; i++) {
+    page_id_t child_page_id = items[i].second;
+    auto page = buffer_pool_manager->FetchPage(child_page_id);
+    auto child = reinterpret_cast<BPlusTreePage *>(page->GetData());
+    child->SetParentPageId(GetPageId());
+    buffer_pool_manager->UnpinPage(child_page_id, true);
+  }
+}
 
 /*****************************************************************************
  * REMOVE

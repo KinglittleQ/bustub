@@ -132,11 +132,12 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
   int left_size = GetSize() / 2;
   int right_size = GetSize() - left_size;
 
-  // copy
-  memcpy(recipient->array, array + left_size, sizeof(MappingType) * right_size);
-
+  recipient->CopyNFrom(array + left_size, right_size);
   SetSize(left_size);
-  recipient->SetSize(right_size);
+
+  // set next_page_id
+  recipient->SetNextPageId(GetNextPageId());
+  SetNextPageId(recipient->GetPageId());
 }
 
 /*
@@ -183,7 +184,7 @@ bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, co
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const KeyComparator &comparator) {
   int idx;
-  for (int idx = 0; idx < GetSize(); idx++) {
+  for (idx = 0; idx < GetSize(); idx++) {
     int cmp = comparator(key, KeyAt(idx));
     if (cmp == 0) {
       break;
