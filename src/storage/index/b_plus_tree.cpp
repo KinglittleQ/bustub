@@ -150,12 +150,9 @@ bool BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
   if (leaf_node->GetSize() == leaf_node->GetMaxSize()) {
     auto new_leaf_node = Split(leaf_node);
     InsertIntoParent(leaf_node, new_leaf_node->KeyAt(0), new_leaf_node, transaction);
-    buffer_pool_manager_->UnpinPage(new_leaf_node->GetPageId(), true);
   } else {
-    // buffer_pool_manager_->UnpinPage(page_id, true);
+    buffer_pool_manager_->UnpinPage(page_id, true);
   }
-
-  buffer_pool_manager_->UnpinPage(page_id, true);
 
   return new_size > original_size;
 }
@@ -208,21 +205,21 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
     auto root = NewNode<InternalPage>(&root_page_id_);
     root->Init(root_page_id_, INVALID_PAGE_ID, internal_max_size_);
     root->PopulateNewRoot(old_page_id, key, new_page_id);
+    buffer_pool_manager_->UnpinPage(root_page_id_, true);
 
     // update parent id
-    UpdateParentId(old_node, root_page_id_);
-    UpdateParentId(new_node, root_page_id_);
-
-    // buffer_pool_manager_->UnpinPage(old_page_id, true);
-    // buffer_pool_manager_->UnpinPage(new_page_id, true);
+    old_node->SetParentPageId(root_page_id_);
+    new_node->SetParentPageId(root_page_id_);
+    buffer_pool_manager_->UnpinPage(old_page_id, true);
+    buffer_pool_manager_->UnpinPage(new_page_id, true);
 
     UpdateRootPageId();  // update root
 
     return;
   }
 
-  // buffer_pool_manager_->UnpinPage(old_page_id, true);
-  // buffer_pool_manager_->UnpinPage(new_page_id, true);
+  buffer_pool_manager_->UnpinPage(old_page_id, true);
+  buffer_pool_manager_->UnpinPage(new_page_id, true);
 
   auto parent = GetNode<InternalPage>(parent_id);
   parent->InsertNodeAfter(old_page_id, key, new_page_id);
@@ -230,13 +227,9 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
   if (parent->GetSize() == parent->GetMaxSize()) {
     auto new_parent_node = Split(parent);
     InsertIntoParent(parent, new_parent_node->KeyAt(0), new_parent_node, transaction);
+  } else {
+    buffer_pool_manager_->UnpinPage(parent_id, true);
   }
-}
-
-INDEX_TEMPLATE_ARGUMENTS
-template <typename N>
-void BPLUSTREE_TYPE::UpdateParentId(N *node, page_id_t parent_id) {
-  node->SetParentPageId(parent_id);
 }
 
 /*****************************************************************************
