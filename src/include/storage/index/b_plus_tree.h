@@ -87,6 +87,9 @@ class BPlusTree {
   void InsertIntoParent(BPlusTreePage *old_node, const KeyType &key, BPlusTreePage *new_node,
                         Transaction *transaction = nullptr);
 
+  LeafPage *FindLeafNode(const KeyType &key);
+  LeafPage *FindLeftmostLeafNode();
+
   template <typename N>
   N *Split(N *node);
 
