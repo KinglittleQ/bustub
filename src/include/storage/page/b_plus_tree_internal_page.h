@@ -58,6 +58,9 @@ class BPlusTreeInternalPage : public BPlusTreePage {
                          BufferPoolManager *buffer_pool_manager);
 
  private:
+  void UpdateParentIdOfPage(page_id_t page_id, page_id_t parent_page_id, BufferPoolManager *bmp);
+  void ShiftArray(int offset);
+
   void CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager);
   void CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager);
   void CopyFirstFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager);
