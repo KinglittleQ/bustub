@@ -513,7 +513,27 @@ bool BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) {
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() { return INDEXITERATOR_TYPE(); }
+INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() {
+  BPlusTreePage *node = nullptr;
+  auto page_id = root_page_id_;
+
+  // find the leftmost leaf node
+  while (page_id != INVALID_PAGE_ID) {
+    node = GetNode<BPlusTreePage>(page_id);
+
+    if (node->IsLeafPage()) {
+      break;  // DO NOT call UnpinPage() yet
+    } else {
+      auto internal_node = reinterpret_cast<InternalPage *>(node);
+      page_id = internal_node->ValueAt(0);
+      buffer_pool_manager_->UnpinPage(node->GetPageId(), false);
+    }
+  }
+
+  auto leaf_node = reinterpret_cast<LeafPage *>(node);
+  return INDEXITERATOR_TYPE(leaf_node, buffer_pool_manager_);
+}
+
 
 /*
  * Input parameter is low key, find the leaf page that contains the input key
@@ -521,7 +541,33 @@ INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() { return INDEXITERATOR_TYPE(); }
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin(const KeyType &key) { return INDEXITERATOR_TYPE(); }
+INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin(const KeyType &key) {
+  auto page_id = root_page_id_;
+  BPlusTreePage *node = nullptr;
+  int offset = 0;
+
+  // find leaf node
+  while (page_id != INVALID_PAGE_ID) {
+    node = GetNode<BPlusTreePage>(page_id);
+
+    if (node->IsLeafPage()) {
+      break;
+    } else {
+      auto internal_node = reinterpret_cast<InternalPage *>(node);
+      page_id = internal_node->Lookup(key, comparator_);
+      buffer_pool_manager_->UnpinPage(node->GetPageId(), false);
+    }
+  }
+
+  if (node != nullptr) {
+    auto leaf_node = reinterpret_cast<LeafPage *>(node);
+    offset = leaf_node->KeyIndex(key, comparator_);
+  }
+
+  auto leaf_node = reinterpret_cast<LeafPage *>(node);
+
+  return INDEXITERATOR_TYPE(leaf_node, buffer_pool_manager_, offset);
+}
 
 /*
  * Input parameter is void, construct an index iterator representing the end
@@ -529,7 +575,10 @@ INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin(const KeyType &key) { return INDEXITERA
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_TYPE::end() { return INDEXITERATOR_TYPE(); }
+INDEXITERATOR_TYPE BPLUSTREE_TYPE::end() {
+  return INDEXITERATOR_TYPE(nullptr, buffer_pool_manager_, 0);
+}
+
 
 /*****************************************************************************
  * UTILITIES AND DEBUG

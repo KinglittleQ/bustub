@@ -56,7 +56,7 @@ INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator &comparator) const {
   int idx;
   for (idx = 0; idx < GetSize(); idx++) {
-    if (comparator(key, KeyAt(idx)) < 0) {
+    if (comparator(key, KeyAt(idx)) <= 0) {
       return idx;
     }
   }
