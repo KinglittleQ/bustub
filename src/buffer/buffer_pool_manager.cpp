@@ -186,11 +186,6 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
   auto frame_id = page_table_[page_id];
   auto &page = pages_[frame_id];
 
-  if (page.pin_count_ != 0) {
-    printf("pin_count: %d\n", page.pin_count_);
-    return false;
-  }
-
   disk_manager_->DeallocatePage(page_id);
 
   // now the page is still in the replacer, we should remove it
