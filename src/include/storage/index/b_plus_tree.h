@@ -100,7 +100,7 @@ class BPlusTree {
   template <typename N>
   void Redistribute(N *neighbor_node, N *node, int index);
 
-  bool AdjustRoot(BPlusTreePage *node);
+  bool AdjustRoot(BPlusTreePage *node, Transaction *transaction);
 
   void UpdateRootPageId(int insert_record = 0);
 
@@ -135,6 +135,13 @@ class BPlusTree {
         page->RUnlatch();
       }
       buffer_pool_manager_->UnpinPage(page->GetPageId(), is_write);
+    }
+  }
+
+  void DeletePages(std::shared_ptr<std::unordered_set<page_id_t>> page_set) {
+    for (const auto &page_id : *page_set) {
+      bool success = buffer_pool_manager_->DeletePage(page_id);
+      assert(success);
     }
   }
 
