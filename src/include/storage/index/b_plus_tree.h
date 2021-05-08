@@ -80,7 +80,7 @@ class BPlusTree {
   Page *FindLeafPage(const KeyType &key, bool leftMost = false);
 
  private:
-  void StartNewTree(const KeyType &key, const ValueType &value);
+  bool StartNewTree(const KeyType &key, const ValueType &value);
 
   bool InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr);
 
@@ -88,7 +88,7 @@ class BPlusTree {
                         Transaction *transaction = nullptr);
 
   template <typename N>
-  N *Split(N *node);
+  N *Split(N *node, Transaction *transaction);
 
   template <typename N>
   bool CoalesceOrRedistribute(N *node, Transaction *transaction = nullptr);
@@ -124,6 +124,20 @@ class BPlusTree {
     return reinterpret_cast<N *>(page->GetData());
   }
 
+  template <bool is_write>
+  void ReleasePages(std::shared_ptr<std::deque<Page *>> page_set) {
+    while (!page_set->empty()) {
+      auto page = page_set->front();
+      page_set->pop_front();
+      if (is_write) {
+        page->WUnlatch();
+      } else {
+        page->RUnlatch();
+      }
+      buffer_pool_manager_->UnpinPage(page->GetPageId(), is_write);
+    }
+  }
+
   // member variable
   std::string index_name_;
   page_id_t root_page_id_;
@@ -131,6 +145,8 @@ class BPlusTree {
   KeyComparator comparator_;
   int leaf_max_size_;
   int internal_max_size_;
+
+  std::mutex root_latch_;
 };
 
 }  // namespace bustub
