@@ -22,13 +22,7 @@ INDEXITERATOR_TYPE::~IndexIterator() {
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-bool INDEXITERATOR_TYPE::isEnd() {
-  if (node_ == nullptr and offset_ == 0) {
-    return true;
-  }
-
-  return false;
-}
+bool INDEXITERATOR_TYPE::isEnd() { return node_ == nullptr && offset_ == 0; }
 
 INDEX_TEMPLATE_ARGUMENTS
 const MappingType &INDEXITERATOR_TYPE::operator*() {

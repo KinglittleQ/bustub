@@ -106,10 +106,12 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
 
   // right shift one
   int shifted_size = size - idx;
-  memmove(array + idx + 1, array + idx, sizeof(MappingType) * shifted_size);
+  memmove(reinterpret_cast<char *>(array + idx + 1), reinterpret_cast<char *>(array + idx),
+          sizeof(MappingType) * shifted_size);
 
   // insert
-  array[idx] = std::make_pair<>(key, value);
+  array[idx].first = key;
+  array[idx].second = value;
   IncreaseSize(1);
 
   return GetSize();
@@ -142,7 +144,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyNFrom(MappingType *items, int size) {
-  memcpy(array + GetSize(), items, size * sizeof(MappingType));
+  memcpy(reinterpret_cast<char *>(array + GetSize()), reinterpret_cast<char *>(items), size * sizeof(MappingType));
   IncreaseSize(size);
 }
 
@@ -161,7 +163,8 @@ bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, co
     if (cmp == 0) {
       *value = array[idx].second;
       return true;
-    } else if (cmp < 0) {
+    }
+    if (cmp < 0) {
       break;
     }
   }
@@ -185,14 +188,16 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const 
     int cmp = comparator(key, KeyAt(idx));
     if (cmp == 0) {
       break;
-    } else if (cmp < 0) {
+    }
+    if (cmp < 0) {
       return GetSize();
     }
   }
 
   if (idx != GetSize()) {
     int shifted_size = GetSize() - idx - 1;
-    memmove(array + idx, array + idx + 1, sizeof(MappingType) * shifted_size);
+    memmove(reinterpret_cast<char *>(array + idx), reinterpret_cast<char *>(array + idx + 1),
+            sizeof(MappingType) * shifted_size);
     IncreaseSize(-1);
   }
 
@@ -226,7 +231,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeLeafPage *recipient) 
 
   recipient->CopyNFrom(array, 1);
   IncreaseSize(-1);
-  memmove(array, array + 1, sizeof(MappingType) * GetSize());
+  memmove(reinterpret_cast<char *>(array), reinterpret_cast<char *>(array + 1), sizeof(MappingType) * GetSize());
 }
 
 /*
@@ -246,7 +251,8 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeLeafPage *recipient)
   assert(recipient->GetSize() < GetMinSize());
   assert(GetSize() > GetMinSize());
 
-  memmove(recipient->array + 1, recipient->array, sizeof(MappingType) * recipient->GetSize());
+  memmove(reinterpret_cast<char *>(recipient->array + 1), reinterpret_cast<char *>(recipient->array),
+          sizeof(MappingType) * recipient->GetSize());
   recipient->array[0] = array[GetSize() - 1];
   recipient->IncreaseSize(1);
   IncreaseSize(-1);
@@ -257,7 +263,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeLeafPage *recipient)
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyFirstFrom(const MappingType &item) {
-  memmove(array + 1, array, sizeof(MappingType) * GetSize());
+  memmove(reinterpret_cast<char *>(array + 1), reinterpret_cast<char *>(array), sizeof(MappingType) * GetSize());
   array[0] = item;
   IncreaseSize(1);
 }

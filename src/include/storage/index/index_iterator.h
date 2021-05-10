@@ -34,9 +34,9 @@ class IndexIterator {
 
   IndexIterator &operator++();
 
-  bool operator==(const IndexIterator &itr) const { return node_ == itr.node_ and offset_ == itr.offset_; }
+  bool operator==(const IndexIterator &itr) const { return node_ == itr.node_ && offset_ == itr.offset_; }
 
-  bool operator!=(const IndexIterator &itr) const { return node_ != itr.node_ or offset_ != itr.offset_; }
+  bool operator!=(const IndexIterator &itr) const { return node_ != itr.node_ || offset_ != itr.offset_; }
 
  private:
   LeafPage *node_;

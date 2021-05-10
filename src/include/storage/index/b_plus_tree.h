@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include <deque>
 #include <queue>
 #include <string>
 #include <vector>
@@ -112,6 +113,7 @@ class BPlusTree {
   template <typename N = BPlusTreePage>
   N *GetNode(page_id_t page_id) {
     auto page = buffer_pool_manager_->FetchPage(page_id);
+    pinned_pages_.push_back(page_id);
     return reinterpret_cast<N *>(page->GetData());
   }
 
@@ -121,8 +123,19 @@ class BPlusTree {
     if (page == nullptr) {
       throw Exception(ExceptionType::OUT_OF_MEMORY, "out of memory");
     }
+    pinned_pages_.push_back(*page_id);
     return reinterpret_cast<N *>(page->GetData());
   }
+
+  void UnpinPages(bool is_write) {
+    while (!pinned_pages_.empty()) {
+      auto page_id = pinned_pages_.front();
+      pinned_pages_.pop_front();
+      buffer_pool_manager_->UnpinPage(page_id, is_write);
+    }
+  }
+
+  inline static thread_local std::deque<page_id_t> pinned_pages_;
 
   // member variable
   std::string index_name_;

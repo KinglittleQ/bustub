@@ -119,7 +119,8 @@ INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, const KeyType &new_key,
                                                     const ValueType &new_value) {
   int idx = ValueIndex(old_value);
-  memmove(array + idx + 2, array + idx + 1, sizeof(MappingType) * (GetSize() - idx - 1));
+  memmove(reinterpret_cast<char *>(array + idx + 2), reinterpret_cast<char *>(array + idx + 1),
+          sizeof(MappingType) * (GetSize() - idx - 1));
   array[idx + 1].first = new_key;
   array[idx + 1].second = new_value;
   IncreaseSize(1);
@@ -152,7 +153,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {
-  memcpy(array + GetSize(), items, size * sizeof(MappingType));
+  memcpy(reinterpret_cast<char *>(array + GetSize()), reinterpret_cast<char *>(items), size * sizeof(MappingType));
   IncreaseSize(size);
 
   for (int i = 0; i < size; i++) {
@@ -171,7 +172,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, Buf
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(int index) {
-  memmove(array + index, array + index + 1, sizeof(MappingType) * (GetSize() - index - 1));
+  memmove(reinterpret_cast<char *>(array + index), reinterpret_cast<char *>(array + index + 1),
+          sizeof(MappingType) * (GetSize() - index - 1));
   IncreaseSize(-1);
 }
 
@@ -225,7 +227,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *rec
   recipient->array[recipient->GetSize()].first = middle_key;
   recipient->IncreaseSize(1);
 
-  memmove(array, array + 1, sizeof(MappingType) * (GetSize() - 1));
+  memmove(reinterpret_cast<char *>(array), reinterpret_cast<char *>(array + 1), sizeof(MappingType) * (GetSize() - 1));
   IncreaseSize(-1);
 
   // update parent id
@@ -262,7 +264,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *re
   assert(recipient->GetSize() < GetMinSize());
   assert(GetSize() > GetMinSize());
 
-  memmove(recipient->array + 1, recipient->array, sizeof(MappingType) * recipient->GetSize());
+  memmove(reinterpret_cast<char *>(recipient->array + 1), reinterpret_cast<char *>(recipient->array),
+          sizeof(MappingType) * recipient->GetSize());
   recipient->array[0] = array[GetSize() - 1];
   recipient->array[1].first = middle_key;
   recipient->IncreaseSize(1);
@@ -280,7 +283,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *re
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyFirstFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
-  memmove(array + 1, array, sizeof(MappingType) * GetSize());
+  memmove(reinterpret_cast<char *>(array + 1), reinterpret_cast<char *>(array), sizeof(MappingType) * GetSize());
   array[0] = pair;
   IncreaseSize(1);
 
@@ -301,10 +304,11 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::ShiftArray(int offset) {
   if (offset > 0) {
     // right shift
-    memmove(array + offset, array, sizeof(MappingType) * GetSize());
+    memmove(reinterpret_cast<char *>(array + offset), reinterpret_cast<char *>(array), sizeof(MappingType) * GetSize());
   } else if (offset < 0) {
     // left shift
-    memmove(array, array - offset, sizeof(MappingType) * (GetSize() + offset));
+    memmove(reinterpret_cast<char *>(array), reinterpret_cast<char *>(array - offset),
+            sizeof(MappingType) * (GetSize() + offset));
   }
 }
 
