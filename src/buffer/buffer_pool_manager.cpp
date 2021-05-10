@@ -74,6 +74,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
   if (page_table_.find(page_id) != page_table_.end()) {
     // the page already exists
     frame_id = page_table_[page_id];
+    replacer_->Pin(frame_id);
     pages_[frame_id].pin_count_ += 1;
   } else {
     // find one free page
@@ -100,7 +101,7 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty_) {
 
   if (page_table_.find(page_id) == page_table_.end()) {
     // page_id is invalid
-    return false;
+    return true;
   }
 
   auto frame_id = page_table_[page_id];
