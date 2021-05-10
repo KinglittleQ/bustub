@@ -21,7 +21,7 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
     : pool_size_(pool_size), disk_manager_(disk_manager), log_manager_(log_manager) {
   // We allocate a consecutive memory space for the buffer pool.
   pages_ = new Page[pool_size_];
-  replacer_ = new ClockReplacer(pool_size);
+  replacer_ = new LRUReplacer(pool_size);
 
   // Initially, every page is in the free list.
   for (size_t i = 0; i < pool_size_; ++i) {
@@ -74,6 +74,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
   if (page_table_.find(page_id) != page_table_.end()) {
     // the page already exists
     frame_id = page_table_[page_id];
+    replacer_->Pin(frame_id);
     pages_[frame_id].pin_count_ += 1;
   } else {
     // find one free page
@@ -101,7 +102,7 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty_) {
 
   if (page_table_.find(page_id) == page_table_.end()) {
     // page_id is invalid
-    return false;
+    return true;
   }
 
   auto frame_id = page_table_[page_id];
