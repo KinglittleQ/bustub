@@ -94,10 +94,10 @@ class BPlusTree {
   N *Split(N *node);
 
   template <typename N>
-  bool CoalesceOrRedistribute(N *node, Transaction *transaction = nullptr);
+  void CoalesceOrRedistribute(N *node, Transaction *transaction = nullptr);
 
   template <typename N>
-  bool Coalesce(N **neighbor_node, N **node, BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent,
+  void Coalesce(N **neighbor_node, N **node, BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent,
                 int index, Transaction *transaction = nullptr);
 
   template <typename N>
@@ -171,9 +171,40 @@ class BPlusTree {
     }
   }
 
+  void UnpinLastPage(bool is_write) {
+    assert(!pinned_pages_.empty());
+    auto page_id = pinned_pages_.back();
+    pinned_pages_.pop_back();
+    buffer_pool_manager_->UnpinPage(page_id, is_write);
+  }
+
+  void UnlatchLastPage(bool is_write) {
+    assert(!latched_pages_.empty());
+    auto page = latched_pages_.back();
+    latched_pages_.pop_back();
+    id_to_pages_.erase(page->GetPageId());
+    if (is_write) {
+      page->WUnlatch();
+    } else {
+      page->RUnlatch();
+    }
+  }
+
+  void DeletePages() {
+    while (!deleted_pages_.empty()) {
+      auto page_id = deleted_pages_.front();
+      deleted_pages_.pop_front();
+      bool success;
+      do {
+        success = buffer_pool_manager_->DeletePage(page_id);
+      } while (!success);
+    }
+  }
+
   inline static thread_local std::deque<page_id_t> pinned_pages_;
   inline static thread_local std::deque<Page *> latched_pages_;
   inline static thread_local std::unordered_map<page_id_t, Page *> id_to_pages_;
+  inline static thread_local std::deque<page_id_t> deleted_pages_;
 
   // member variable
   std::string index_name_;
