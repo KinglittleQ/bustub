@@ -10,9 +10,11 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include <atomic>
 #include <deque>
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "concurrency/transaction.h"
@@ -81,7 +83,7 @@ class BPlusTree {
   Page *FindLeafPage(const KeyType &key, bool leftMost = false);
 
  private:
-  void StartNewTree(const KeyType &key, const ValueType &value);
+  bool StartNewTree(const KeyType &key, const ValueType &value);
 
   bool InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction = nullptr);
 
@@ -111,35 +113,71 @@ class BPlusTree {
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
   template <typename N = BPlusTreePage>
-  N *GetNode(page_id_t page_id) {
+  N *GetNode(page_id_t page_id, int latch_type) {
     auto page = buffer_pool_manager_->FetchPage(page_id);
+    assert(page);
+    if (latch_type == 1) {
+      page->WLatch();
+      latched_pages_.push_back(page);
+      id_to_pages_[page_id] = page;
+    } else if (latch_type == 2) {
+      page->RLatch();
+      latched_pages_.push_back(page);
+      id_to_pages_[page_id] = page;
+    }
+
     pinned_pages_.push_back(page_id);
     return reinterpret_cast<N *>(page->GetData());
   }
 
   template <typename N>
-  N *NewNode(page_id_t *page_id) {
+  N *NewNode(page_id_t *page_id, int latch_type) {
     auto page = buffer_pool_manager_->NewPage(page_id);
     if (page == nullptr) {
       throw Exception(ExceptionType::OUT_OF_MEMORY, "out of memory");
     }
+    if (latch_type == 1) {
+      page->WLatch();
+      latched_pages_.push_back(page);
+      id_to_pages_[*page_id] = page;
+    } else if (latch_type == 2) {
+      page->RLatch();
+      latched_pages_.push_back(page);
+      id_to_pages_[*page_id] = page;
+    }
+
     pinned_pages_.push_back(*page_id);
     return reinterpret_cast<N *>(page->GetData());
   }
 
-  void UnpinPages(bool is_write) {
-    while (!pinned_pages_.empty()) {
+  void UnpinPages(bool is_write, size_t remained_size) {
+    while (pinned_pages_.size() > remained_size) {
       auto page_id = pinned_pages_.front();
       pinned_pages_.pop_front();
       buffer_pool_manager_->UnpinPage(page_id, is_write);
     }
   }
 
+  void UnlatchPages(bool is_write, size_t remained_size) {
+    while (latched_pages_.size() > remained_size) {
+      auto page = latched_pages_.front();
+      latched_pages_.pop_front();
+      id_to_pages_.erase(page->GetPageId());
+      if (is_write) {
+        page->WUnlatch();
+      } else {
+        page->RUnlatch();
+      }
+    }
+  }
+
   inline static thread_local std::deque<page_id_t> pinned_pages_;
+  inline static thread_local std::deque<Page *> latched_pages_;
+  inline static thread_local std::unordered_map<page_id_t, Page *> id_to_pages_;
 
   // member variable
   std::string index_name_;
-  page_id_t root_page_id_;
+  std::atomic<page_id_t> root_page_id_;
   BufferPoolManager *buffer_pool_manager_;
   KeyComparator comparator_;
   int leaf_max_size_;
