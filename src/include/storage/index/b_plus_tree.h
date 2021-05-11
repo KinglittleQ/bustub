@@ -114,6 +114,8 @@ class BPlusTree {
 
   template <typename N = BPlusTreePage>
   N *GetNode(page_id_t page_id, int latch_type) {
+    // the page may already be deleted, but it still can be read.
+    // We won't write to it so it's safe here.
     auto page = buffer_pool_manager_->FetchPage(page_id);
     assert(page);
     if (latch_type == 1) {
@@ -194,6 +196,7 @@ class BPlusTree {
     while (!deleted_pages_.empty()) {
       auto page_id = deleted_pages_.front();
       deleted_pages_.pop_front();
+      // buffer_pool_manager_->DeletePage(page_id);  // may fail here
       bool success;
       do {
         success = buffer_pool_manager_->DeletePage(page_id);

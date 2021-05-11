@@ -108,9 +108,6 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty_) {
   auto frame_id = page_table_[page_id];
   auto &page = pages_[page_table_[page_id]];
 
-  if (page.pin_count_ <= 0) {
-    printf("page_id: %d, pin_count=%d\n", page_id, page.pin_count_);
-  }
   // assert(page.pin_count_ > 0);
   if (page.pin_count_ == 0) {
     page.is_dirty_ |= is_dirty_;

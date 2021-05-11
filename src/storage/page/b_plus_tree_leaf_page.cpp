@@ -158,14 +158,31 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyNFrom(MappingType *items, int size) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, const KeyComparator &comparator) const {
-  for (int idx = 0; idx < GetSize(); idx++) {
-    int cmp = comparator(key, KeyAt(idx));
+  // for (int idx = 0; idx < GetSize(); idx++) {
+  //   int cmp = comparator(key, KeyAt(idx));
+  //   if (cmp == 0) {
+  //     *value = array[idx].second;
+  //     return true;
+  //   }
+  //   if (cmp < 0) {
+  //     break;
+  //   }
+  // }
+
+  int left = 0;
+  int right = GetSize() - 1;
+  while (left <= right) {
+    int mid = (left + right) / 2;
+    int cmp = comparator(key, KeyAt(mid));
     if (cmp == 0) {
-      *value = array[idx].second;
+      *value = array[mid].second;
       return true;
     }
+
     if (cmp < 0) {
-      break;
+      right = mid - 1;
+    } else {
+      left = mid + 1;
     }
   }
 

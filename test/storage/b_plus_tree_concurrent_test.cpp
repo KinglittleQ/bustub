@@ -361,7 +361,10 @@ TEST(BPlusTreeConcurrentTest, ScaleMixTest) {
   LaunchParallelTest(num_threads, InsertHelper, &tree, keys);
 
   // concurrent delete
-  std::vector<int64_t> remove_keys = {1, 4, 3, 5, 6};
+  std::vector<int64_t> remove_keys;
+  for (int i = 6; i <= scale; i++) {
+    remove_keys.push_back(i);
+  }
   LaunchParallelTest(num_threads, DeleteHelper, &tree, remove_keys);
 
   int64_t start_key = 2;
@@ -371,7 +374,7 @@ TEST(BPlusTreeConcurrentTest, ScaleMixTest) {
     size = size + 1;
   }
 
-  EXPECT_EQ(size, scale - 5);
+  EXPECT_EQ(size, 4);
 
   bpm->UnpinPage(HEADER_PAGE_ID, true);
   delete key_schema;
