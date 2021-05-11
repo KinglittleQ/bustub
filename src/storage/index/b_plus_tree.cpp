@@ -46,6 +46,8 @@ bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
     return false;
   }
 
+  pinned_pages_.clear();
+
   auto page_id = root_page_id_;
   BPlusTreePage *node;
 
@@ -88,6 +90,7 @@ bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) {
   bool success;
+  pinned_pages_.clear();
 
   if (root_page_id_ == INVALID_PAGE_ID) {
     StartNewTree(key, value);
@@ -487,7 +490,10 @@ INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() {
 
   // find the leftmost leaf node
   while (page_id != INVALID_PAGE_ID) {
-    node = GetNode<BPlusTreePage>(page_id);
+    // node = GetNode<BPlusTreePage>(page_id);
+    auto page = buffer_pool_manager_->FetchPage(page_id);
+    assert(page);
+    node = reinterpret_cast<BPlusTreePage *>(page->GetData());
 
     if (node->IsLeafPage()) {
       break;
@@ -563,7 +569,10 @@ Page *BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, bool leftMost) {
   BPlusTreePage *node;
 
   while (true) {
-    node = GetNode<BPlusTreePage>(page_id);
+    // node = GetNode<BPlusTreePage>(page_id);
+    auto page = buffer_pool_manager_->FetchPage(page_id);
+    assert(page);
+    node = reinterpret_cast<BPlusTreePage *>(page->GetData());
 
     if (node->IsLeafPage()) {
       break;
