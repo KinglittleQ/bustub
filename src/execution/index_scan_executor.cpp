@@ -28,16 +28,22 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
   predicate_ = plan->GetPredicate();
 }
 
-void IndexScanExecutor::Init() { iterator_ = index_->GetBeginIterator(); }
+void IndexScanExecutor::Init() {
+  iterator_ = index_->GetBeginIterator();
+  std::cout << "First key: " << (*iterator_).first << std::endl;
+}
 
 bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
-  while (iterator_ != index_->GetEndIterator()) {
+  while (!iterator_.isEnd()) {
     auto id = (*iterator_).second;
     ++iterator_;
 
     bool success = table_->GetTuple(id, tuple, exec_ctx_->GetTransaction());
     assert(success);
-    bool passed = predicate_->Evaluate(tuple, schema_).GetAs<bool>();
+    bool passed = true;
+    if (predicate_ != nullptr) {
+      passed = predicate_->Evaluate(tuple, schema_).GetAs<bool>();
+    }
     if (passed) {
       *rid = id;
       return true;

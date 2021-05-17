@@ -130,6 +130,16 @@ class Catalog {
     auto metadata = new IndexMetadata(index_name, table_name, &schema, key_attrs);
     std::unique_ptr<Index> index(new BPlusTreeIndex<KeyType, ValueType, KeyComparator>(metadata, bpm_));
 
+    // insert keys into index
+    auto table_info = GetTable(table_name);
+    auto table = table_info->table_.get();
+    int n = 0;
+    for (auto it = table->Begin(txn); it != table->End(); it++) {
+      Tuple key = it->KeyFromTuple(schema, key_schema, key_attrs);
+      index->InsertEntry(key, it->GetRid(), txn);
+      n++;
+    }
+
     auto index_oid = next_index_oid_.fetch_add(1);
     auto index_info = new IndexInfo(key_schema, index_name, std::move(index), index_oid, table_name, keysize);
 

@@ -100,7 +100,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
   assert(idx <= size);
 
   // duplicated key
-  if (comparator(key, KeyAt(idx)) == 0) {
+  if (idx != size && comparator(key, KeyAt(idx)) == 0) {
     return GetSize();
   }
 
