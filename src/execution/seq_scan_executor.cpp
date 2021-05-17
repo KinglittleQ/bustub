@@ -25,14 +25,17 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
 
 void SeqScanExecutor::Init() {
   auto it = table_heap_->Begin(exec_ctx_->GetTransaction());
-  iterator_= std::make_unique<TableIterator>(it);
+  iterator_ = std::make_unique<TableIterator>(it);
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   auto &it = *iterator_;
 
   while (it != table_heap_->End()) {
-    bool passed = predicate_->Evaluate(&(*it), schema_).GetAs<bool>();
+    bool passed = true;
+    if (predicate_ != nullptr) {
+      passed = predicate_->Evaluate(&(*it), schema_).GetAs<bool>();
+    }
     if (passed) {
       *tuple = *it;
       *rid = tuple->GetRid();
