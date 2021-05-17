@@ -34,24 +34,42 @@ void InsertExecutor::Init() {
     for (auto &value : values) {
       Tuple tuple(value, &schema);
       RID rid;
+
+      // insert into table
       bool success = table->InsertTuple(tuple, &rid, txn);
       if (!success) {
         success_ = false;
         break;
+      }
+
+      // insert into index
+      auto indexes = catalog->GetTableIndexes(table_metadata->name_);
+      for (auto &index : indexes) {
+        Tuple key = tuple.KeyFromTuple(schema, index->key_schema_, index->index_->GetKeyAttrs());
+        index->index_->InsertEntry(key, rid, txn);
       }
     }
   } else {
-    Tuple tuple(std::vector<Value>(), &schema);
     RID rid;
+    Tuple tuple(rid);
     while (true) {
-      bool continued = child_executor_->Next(&tuple, &rid);
-      if (!continued) {
+      bool has_more = child_executor_->Next(&tuple, &rid);
+      if (!has_more) {
         break;
       }
+
+      // insert into table
       bool success = table->InsertTuple(tuple, &rid, txn);
       if (!success) {
         success_ = false;
         break;
+      }
+
+      // insert into index
+      auto indexes = catalog->GetTableIndexes(table_metadata->name_);
+      for (auto &index : indexes) {
+        Tuple key = tuple.KeyFromTuple(schema, index->key_schema_, index->index_->GetKeyAttrs());
+        index->index_->InsertEntry(key, rid, txn);
       }
     }
   }

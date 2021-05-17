@@ -51,7 +51,7 @@ void UpdateExecutor::Init() {
       Tuple key = tuple.KeyFromTuple(schema, index->key_schema_, index->index_->GetKeyAttrs());
       Tuple new_key = new_tuple.KeyFromTuple(schema, index->key_schema_, index->index_->GetKeyAttrs());
       index->index_->DeleteEntry(key, rid, txn);
-      index->index_->InsertEntry(key, rid, txn);
+      index->index_->InsertEntry(new_key, rid, txn);
     }
   }
 }

@@ -13,7 +13,8 @@
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : AbstractExecutor(exec_ctx) {
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
+    : AbstractExecutor(exec_ctx), iterator_(nullptr, RID(), nullptr) {
   auto catalog = exec_ctx->GetCatalog();
   auto table_oid = plan->GetTableOid();
   auto table = catalog->GetTable(table_oid);
@@ -21,18 +22,17 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
   table_heap_ = table->table_.get();
   schema_ = &table->schema_;
   predicate_ = plan->GetPredicate();
+  iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction());
 }
 
-void SeqScanExecutor::Init() {
-  auto it = table_heap_->Begin(exec_ctx_->GetTransaction());
-  iterator_ = std::make_unique<TableIterator>(it);
-}
+void SeqScanExecutor::Init() {}
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
-  auto &it = *iterator_;
+  auto &it = iterator_;
 
   while (it != table_heap_->End()) {
     bool passed = true;
+
     if (predicate_ != nullptr) {
       passed = predicate_->Evaluate(&(*it), schema_).GetAs<bool>();
     }
