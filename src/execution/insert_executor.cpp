@@ -27,7 +27,7 @@ void InsertExecutor::Init() {
   auto table_metadata = catalog->GetTable(table_oid);
   auto table = table_metadata->table_.get();
   const auto &schema = table_metadata->schema_;
-  const auto txn = exec_ctx_->GetTransaction();
+  auto txn = exec_ctx_->GetTransaction();
 
   if (plan_->IsRawInsert()) {
     auto values = plan_->RawValues();
