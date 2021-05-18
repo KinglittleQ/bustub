@@ -50,5 +50,7 @@ class IndexScanExecutor : public AbstractExecutor {
 
   BPlusTreeIndex<GenericKey<8>, RID, GenericComparator<8>> *index_;
   IndexIterator<GenericKey<8>, RID, GenericComparator<8>> iterator_;
+
+  std::vector<uint32_t> attrs_;
 };
 }  // namespace bustub

@@ -22,6 +22,10 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
 }
 
 void InsertExecutor::Init() {
+  if (child_executor_ != nullptr) {
+    child_executor_->Init();
+  }
+
   auto catalog = exec_ctx_->GetCatalog();
   auto table_oid = plan_->TableOid();
   auto table_metadata = catalog->GetTable(table_oid);

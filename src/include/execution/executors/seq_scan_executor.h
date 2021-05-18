@@ -47,5 +47,7 @@ class SeqScanExecutor : public AbstractExecutor {
   const AbstractExpression *predicate_;
   TableHeap *table_heap_;
   Schema *schema_;
+
+  std::vector<uint32_t> attrs_;
 };
 }  // namespace bustub

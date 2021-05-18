@@ -13,7 +13,7 @@
 
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx), iterator_(nullptr, nullptr, 0) {
+    : AbstractExecutor(exec_ctx), plan_(plan), iterator_(nullptr, nullptr, 0) {
   auto catalog = exec_ctx->GetCatalog();
   auto index_oid = plan->GetIndexOid();
   auto index_info = catalog->GetIndex(index_oid);
@@ -29,8 +29,13 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
 }
 
 void IndexScanExecutor::Init() {
+  for (uint32_t i = 0; i < GetOutputSchema()->GetColumnCount(); i++) {
+    const auto &col = GetOutputSchema()->GetColumn(i);
+    uint32_t idx = schema_->GetColIdx(col.GetName());
+    attrs_.push_back(idx);
+  }
+
   iterator_ = index_->GetBeginIterator();
-  std::cout << "First key: " << (*iterator_).first << std::endl;
 }
 
 bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
@@ -46,6 +51,7 @@ bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
     }
     if (passed) {
       *rid = id;
+      *tuple = tuple->KeyFromTuple(*schema_, *GetOutputSchema(), attrs_);
       return true;
     }
   }

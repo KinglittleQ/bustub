@@ -14,7 +14,7 @@
 namespace bustub {
 
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx), iterator_(nullptr, RID(), nullptr) {
+    : AbstractExecutor(exec_ctx), plan_(plan), iterator_(nullptr, RID(), nullptr) {
   auto catalog = exec_ctx->GetCatalog();
   auto table_oid = plan->GetTableOid();
   auto table = catalog->GetTable(table_oid);
@@ -22,10 +22,17 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
   table_heap_ = table->table_.get();
   schema_ = &table->schema_;
   predicate_ = plan->GetPredicate();
-  iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction());
 }
 
-void SeqScanExecutor::Init() {}
+void SeqScanExecutor::Init() {
+  for (uint32_t i = 0; i < GetOutputSchema()->GetColumnCount(); i++) {
+    const auto &col = GetOutputSchema()->GetColumn(i);
+    uint32_t idx = schema_->GetColIdx(col.GetName());
+    attrs_.push_back(idx);
+  }
+
+  iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction());
+}
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   auto &it = iterator_;
@@ -37,8 +44,8 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
       passed = predicate_->Evaluate(&(*it), schema_).GetAs<bool>();
     }
     if (passed) {
-      *tuple = *it;
-      *rid = tuple->GetRid();
+      *rid = it->GetRid();
+      *tuple = it->KeyFromTuple(*schema_, *GetOutputSchema(), attrs_);
       it++;
       return true;
     }
