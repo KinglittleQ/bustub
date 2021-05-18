@@ -79,13 +79,6 @@ void InsertExecutor::Init() {
   }
 }
 
-bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-  if (success_) {
-    success_ = false;
-    return true;
-  }
-
-  return false;
-}
+bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) { return false; }
 
 }  // namespace bustub

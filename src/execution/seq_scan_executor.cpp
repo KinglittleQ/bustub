@@ -22,13 +22,6 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
   table_heap_ = table->table_.get();
   schema_ = &table->schema_;
   predicate_ = plan->GetPredicate();
-
-  const auto output_schema = plan_->OutputSchema();
-  for (uint32_t i = 0; i < output_schema->GetColumnCount(); i++) {
-    const auto &col = output_schema->GetColumn(i);
-    uint32_t idx = schema_->GetColIdx(col.GetName());
-    attrs_.push_back(idx);
-  }
 }
 
 void SeqScanExecutor::Init() { iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction()); }
@@ -44,7 +37,16 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
     }
     if (passed) {
       *rid = it->GetRid();
-      *tuple = it->KeyFromTuple(*schema_, *GetOutputSchema(), attrs_);
+
+      const auto output_schema = plan_->OutputSchema();
+      const auto &cols = output_schema->GetColumns();
+      std::vector<Value> values;
+      for (const auto &col : cols) {
+        auto val = col.GetExpr()->Evaluate(&(*it), schema_);
+        values.push_back(val);
+      }
+      *tuple = Tuple(values, output_schema);
+
       it++;
       return true;
     }

@@ -30,36 +30,11 @@ NestIndexJoinExecutor::NestIndexJoinExecutor(ExecutorContext *exec_ctx, const Ne
   auto right_table_info = catalog->GetTable(right_table_oid);
   right_table_ = right_table_info->table_.get();
 
-  // key attrs
-  for (uint32_t i = 0; i < key_schema_->GetColumnCount(); i++) {
-    const auto &col = key_schema_->GetColumn(i);
-    uint32_t idx = left_schema_->GetColIdx(col.GetName());
-    key_attrs_.push_back(idx);
-  }
-
-  // output schema
-  const auto output_schema = plan_->OutputSchema();
-  attrs_.resize(output_schema->GetColumnCount());
-  for (uint32_t i = 0; i < output_schema->GetColumnCount(); i++) {
-    auto col_name = output_schema->GetColumn(i).GetName();
-
-    bool found = false;
-    for (uint32_t j = 0; j < left_schema_->GetColumnCount() && !found; j++) {
-      if (left_schema_->GetColumn(j).GetName() == col_name) {
-        attrs_[i] = (j << 1);
-        found = true;
-      }
-    }
-
-    for (uint32_t j = 0; j < right_schema_->GetColumnCount() && !found; j++) {
-      if (right_schema_->GetColumn(j).GetName() == col_name) {
-        attrs_[i] = (j << 1) + 1;
-        found = true;
-      }
-    }
-
-    assert(found);
-  }
+  // // key attrs
+  // for (uint32_t i = 0; i < key_schema_->GetColumnCount(); i++) {
+  //   uint32_t idx = index_->GetKeyAttrs()[i];
+  //   key_attrs_.push_back(idx);
+  // }
 }
 
 void NestIndexJoinExecutor::Init() { child_executor_->Init(); }
@@ -77,7 +52,7 @@ bool NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) {
 
   auto txn = exec_ctx_->GetTransaction();
 
-  auto key = left_tuple.KeyFromTuple(*left_schema_, *key_schema_, key_attrs_);
+  auto key = left_tuple.KeyFromTuple(*left_schema_, *key_schema_, index_->GetKeyAttrs());
   std::vector<RID> result;
   index_->ScanKey(key, &result, txn);
   if (result.empty()) {
@@ -95,16 +70,12 @@ bool NestIndexJoinExecutor::Next(Tuple *tuple, RID *rid) {
   }
 
   // combine two tuples
+  const auto output_schema = plan_->OutputSchema();
+  const auto &cols = output_schema->GetColumns();
   std::vector<Value> values;
-  for (uint32_t attr : attrs_) {
-    bool is_left = (attr % 2 == 0);
-    uint32_t idx = (attr >> 1);
-
-    if (is_left) {
-      values.push_back(left_tuple.GetValue(left_schema_, idx));
-    } else {
-      values.push_back(right_tuple.GetValue(right_schema_, idx));
-    }
+  for (const auto &col : cols) {
+    auto val = col.GetExpr()->EvaluateJoin(&left_tuple, left_schema_, &right_tuple, right_schema_);
+    values.push_back(val);
   }
 
   *tuple = Tuple(values, plan_->OutputSchema());
