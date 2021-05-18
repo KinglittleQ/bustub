@@ -22,17 +22,16 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
   table_heap_ = table->table_.get();
   schema_ = &table->schema_;
   predicate_ = plan->GetPredicate();
-}
 
-void SeqScanExecutor::Init() {
-  for (uint32_t i = 0; i < GetOutputSchema()->GetColumnCount(); i++) {
-    const auto &col = GetOutputSchema()->GetColumn(i);
+  const auto output_schema = plan_->OutputSchema();
+  for (uint32_t i = 0; i < output_schema->GetColumnCount(); i++) {
+    const auto &col = output_schema->GetColumn(i);
     uint32_t idx = schema_->GetColIdx(col.GetName());
     attrs_.push_back(idx);
   }
-
-  iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction());
 }
+
+void SeqScanExecutor::Init() { iterator_ = table_heap_->Begin(exec_ctx_->GetTransaction()); }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   auto &it = iterator_;
