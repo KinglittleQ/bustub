@@ -26,17 +26,16 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
 
   schema_ = &(table_metadata->schema_);
   predicate_ = plan->GetPredicate();
-}
 
-void IndexScanExecutor::Init() {
-  for (uint32_t i = 0; i < GetOutputSchema()->GetColumnCount(); i++) {
-    const auto &col = GetOutputSchema()->GetColumn(i);
+  auto output_schema = plan_->OutputSchema();
+  for (uint32_t i = 0; i < output_schema->GetColumnCount(); i++) {
+    const auto &col = output_schema->GetColumn(i);
     uint32_t idx = schema_->GetColIdx(col.GetName());
     attrs_.push_back(idx);
   }
-
-  iterator_ = index_->GetBeginIterator();
 }
+
+void IndexScanExecutor::Init() { iterator_ = index_->GetBeginIterator(); }
 
 bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (!iterator_.isEnd()) {
